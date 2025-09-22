@@ -17,7 +17,7 @@ type Author = {
   prizes?: Prize[];
 };
 
-const API_BASE = "/api";             // gracias al rewrite de next.config.ts
+const API_BASE = "/api";             
 const AUTHORS = `${API_BASE}/authors`;
 const BOOKS   = `${API_BASE}/books`;
 const PRIZES  = `${API_BASE}/prizes`;
@@ -58,20 +58,20 @@ export default function AuthorsPage() {
     }
   };
 
-  // --- BOOKS: borrar; si no se deja, intenta desvincular y volver a borrar
+  
   async function deleteBook(authorId: number, bookId: number) {
-    // intento directo
+    
     let r = await fetch(`${BOOKS}/${bookId}`, { method: "DELETE", cache: "no-store" });
     if (r.ok) return;
 
-    // fallback 1: desvincular por /authors/:aid/books/:bid
+    
     r = await fetch(`${AUTHORS}/${authorId}/books/${bookId}`, { method: "DELETE", cache: "no-store" });
     if (r.ok) {
       const del = await fetch(`${BOOKS}/${bookId}`, { method: "DELETE", cache: "no-store" });
       if (del.ok) return;
     }
 
-    // fallback 2 (opcional): por si existe PUT del libro sin el autor
+    
     try {
       const getB = await fetch(`${BOOKS}/${bookId}`, { cache: "no-store" });
       if (getB.ok) {
@@ -93,7 +93,7 @@ export default function AuthorsPage() {
     throw new Error(`No se pudo eliminar el libro ${bookId}.`);
   }
 
-  // --- PRIZES: probar varios PATCH/PUT para desvincular y luego DELETE
+  
   async function detachAndDeletePrize(prizeId: number): Promise<boolean> {
     const patchBodies = [{ author: null }, { authorId: null }, { remove: true }];
     for (const body of patchBodies) {
@@ -145,7 +145,7 @@ export default function AuthorsPage() {
     try {
       setDeletingId(id);
 
-      // 1) intento directo
+      
       let del = await fetch(`${AUTHORS}/${id}`, { method: "DELETE", cache: "no-store" });
       if (del.ok) {
         setAuthors(prev => prev.filter(a => a.id !== id));
@@ -154,17 +154,17 @@ export default function AuthorsPage() {
 
       const msg = await readMsg(del);
 
-      // 2) traer autor con relaciones
+      
       const aRes = await fetch(`${AUTHORS}/${id}`, { cache: "no-store" });
       if (!aRes.ok) throw new Error(msg);
       const a: Author = await aRes.json();
 
-      // 3) borrar libros (con desvinculación si hace falta)
+      
       for (const b of a.books || []) {
         await deleteBook(id, Number(b.id));
       }
 
-      // 4) desvincular/ borrar premios
+      
       const pfails: number[] = [];
       for (const p of a.prizes || []) {
         const pid = Number((p as any).id ?? 0);
@@ -180,7 +180,7 @@ export default function AuthorsPage() {
         );
       }
 
-      // 5) reintentar borrar autor
+      
       del = await fetch(`${AUTHORS}/${id}`, { method: "DELETE", cache: "no-store" });
       if (!del.ok) {
         const m2 = await readMsg(del);
